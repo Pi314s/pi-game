@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Starstrike: Jet Assault</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            touch-action: none;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 600px;
+            height: 80vh;
+            max-height: 800px;
+            background: url('https://raw.githubusercontent.com/Pi314s/314pi/main/BGI2.gif') no-repeat center center;
+            background-size: cover;
+            position: relative;
+            border: 2px solid #fff;
+            overflow: hidden;
+            touch-action: none;
+            display: none;
+        }
+        #player-jet {
+            width: 50px;
+            height: 50px;
+            background-size: contain;
+            position: absolute;
+            left: calc(50% - 25px);
+            transition: box-shadow 0.3s;
+        }
+        #player-jet.homing-missiles { box-shadow: 0 0 15px #ffa500, 0 0 30px #ffa500; }
+        #player-jet.spread-shot { box-shadow: 0 0 15px #0f0, 0 0 30px #0f0; }
+        #player-jet.laser { box-shadow: 0 0 15px #f0f, 0 0 30px #f0f; }
+        #player-jet.flamethrower { box-shadow: 0 0 15px #f00, 0 0 30px #f00; }
+        #player-jet.pulse-wave { box-shadow: 0 0 15px #00f, 0 0 30px #00f; }
+        .enemy {
+            width: 50px;
+            height: 50px;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: absolute;
+            transition: top 0.1s linear, left 0.1s linear;
+        }
+        .bullet {
+            width: 5px;
+            height: 20px;
+            background: #ffff00;
+            position: absolute;
+            border-radius: 2px;
+            transition: bottom 0.05s linear;
+        }
+        .missile {
+            width: 8px;
+            height: 20px;
+            background: #ffa500;
+            position: absolute;
+            border-radius: 2px;
+            transition: all 0.05s linear;
+        }
+        .spread-bullet {
+            width: 5px;
+            height: 15px;
+            background: #0f0;
+            position: absolute;
+            border-radius: 2px;
+            transition: bottom 0.05s linear;
+        }
+        .laser-beam {
+            width: 8px;
+            height: 100px;
+            background: linear-gradient(#f0f, #ff00ff);
+            position: absolute;
+            border-radius: 2px;
+            transition: bottom 0.05s linear;
+            box-shadow: 0 0 10px #f0f;
+        }
+        .flame {
+            width: 20px;
+            height: 40px;
+            background: radial-gradient(#f00, #ff4500, transparent);
+            position: absolute;
+            border-radius: 50% 50% 0 0;
+            transition: bottom 0.05s linear;
+        }
+        .pulse-wave {
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(#00f, transparent);
+            position: absolute;
+            border-radius: 50%;
+            transition: all 0.1s ease-out;
+        }
+        .power-up {
+            width: 30px;
+            height: 30px;
+            background: url('https://raw.githubusercontent.com/Pi314s/314pi/main/40.gif') no-repeat center;
+            background-size: contain;
+            position: absolute;
+            transition: top 0.1s linear;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 24px;
+            z-index: 10;
+        }
+        #level-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            font-size: 24px;
+            z-index: 10;
+        }
+        #game-title {
+            color: #00ff00;
+            font-size: 36px;
+            margin: 10px 0;
+        }
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 36px;
+            text-align: center;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        #jet-selection {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://raw.githubusercontent.com/Pi314s/314pi/main/BGI2.gif') no-repeat center center;
+            background-size: cover;
+            color: #fff;
+            text-align: center;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .jet-option {
+            display: inline-block;
+            margin: 20px;
+            cursor: pointer;
+        }
+        .jet-option img {
+            width: 100px;
+            height: 100px;
+        }
+        .jet-option p {
+            margin: 5px 0;
+            font-size: 24px;
+        }
+        #replay-btn, #share-x-btn {
+            margin-top: 15px;
+            padding: 15px 30px;
+            font-size: 24px;
+            background: #00ff00;
+            border: none;
+            color: #000;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #replay-btn:hover, #share-x-btn:hover {
+            background: #00cc00;
+        }
+        @media (orientation: portrait) {
+            #jet-selection h2::before {
+                content: "Please rotate your device to landscape mode for the best experience.";
+                display: block;
+                font-size: 18px;
+                color: #ff0;
+                margin-bottom: 20px;
+            }
+        }
+        .explosion {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #ff4500 20%, #ffff00 50%, transparent 70%);
+            border-radius: 50%;
+            animation: explode 0.3s ease-out forwards;
+            z-index: 5;
+        }
+        @keyframes explode {
+            0% { transform: scale(0.1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <h1 id="game-title"></h1>
+    <div id="game-container">
+        <div id="score">Score: 0</div>
+        <div id="level-info">Level: 1 - Time: 0s</div>
+        <div id="player-jet"></div>
+        <div id="game-over">
+            <div>Game Over!</div>
+            <div id="final-score"></div>
+            <button id="replay-btn">Replay</button>
+            <button id="share-x-btn">Share on X</button>
+        </div>
+    </div>
+    <div id="jet-selection">
+        <h2>Choose Your Pi</h2>
+        <div class="jet-option" data-jet="jet1">
+            <img src="https://raw.githubusercontent.com/Pi314s/314pi/main/1.png" alt="Jet 1">
+            <p>Goldpi</p>
+        </div>
+        <div class="jet-option" data-jet="jet2">
+            <img src="https://raw.githubusercontent.com/Pi314s/314pi/main/pi.png" alt="Jet 2">
+            <p>DarkPi</p>
+        </div>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const jet = document.getElementById('player-jet');
+        const scoreDisplay = document.getElementById('score');
+        const levelInfoDisplay = document.getElementById('level-info');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const replayBtn = document.getElementById('replay-btn');
+        const shareXBtn = document.getElementById('share-x-btn');
+        const jetSelection = document.getElementById('jet-selection');
+        const jetOptions = document.querySelectorAll('.jet-option');
+        let jetX = gameContainer.offsetWidth / 2 - 25;
+        let jetY = gameContainer.offsetHeight - 50;
+        let score = 0;
+        let enemies = [];
+        let bullets = [];
+        let powerUps = [];
+        let gameActive = true;
+        let lastFrameTime = performance.now();
+        let touchX = null;
+        let touchY = null;
+        let gameTime = 0;
+        let isShooting = false;
+        let lastShotTime = 0;
+
+        let moveLeft = false;
+        let moveRight = false;
+        let moveUp = false;
+        let moveDown = false;
+        let jetSpeed = 300;
+
+        let level = 1;
+        let baseEnemySpeed = 100;
+        let spawnRate = 0.02;
+
+        let bulletSpeed = 400;
+        let isPowerUpActive = false;
+        let powerUpDuration = 10;
+        let powerUpTimer = 0;
+        let currentPowerUp = null;
+        const shootCooldown = 0.2;
+
+        const powerUpTypes = [
+            'homing-missiles',
+            'spread-shot',
+            'laser',
+            'flamethrower',
+            'pulse-wave'
+        ];
+
+        const enemyJetImages = [
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/3.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/4.jpeg',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/5.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/6.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/7.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/8.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/9.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/10.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/11.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/12.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/13.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/14.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/15.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/16.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/17.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/18.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/19.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/20.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/21.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/22.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/23.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/24.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/25.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/26.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/27.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/28.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/29.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/30.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/31.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/32.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/33.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/34.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/35.jpeg',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/36.jpeg',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/37.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/38.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/39.png',
+            'https://raw.githubusercontent.com/Pi314s/314pi/main/40.png'
+        ];
+
+        let enemyImageQueue = [...enemyJetImages];
+        let currentEnemyIndex = 0;
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        shuffle(enemyImageQueue);
+
+        jetOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const jetType = option.getAttribute('data-jet');
+                if (jetType === 'jet1') {
+                    jet.style.background = "url('https://raw.githubusercontent.com/Pi314s/314pi/main/1.png') no-repeat";
+                } else if (jetType === 'jet2') {
+                    jet.style.background = "url('https://raw.githubusercontent.com/Pi314s/314pi/main/pi.png') no-repeat";
+                }
+                jet.style.backgroundSize = 'contain';
+                jetSelection.style.display = 'none';
+                gameContainer.style.display = 'block';
+                gameActive = true;
+
+                jetX = gameContainer.offsetWidth / 2 - 25;
+                jetY = gameContainer.offsetHeight - 50;
+                jet.style.left = jetX + 'px';
+                jet.style.top = jetY + 'px';
+
+                spawnEnemy();
+                requestAnimationFrame(updateGame);
+            });
+        });
+
+        function updateGame(currentTime) {
+            if (!gameActive) return;
+
+            const deltaTime = (currentTime - lastFrameTime) / 1000;
+            lastFrameTime = currentTime;
+
+            gameTime += deltaTime;
+            level = Math.floor(gameTime / 10) + 1;
+
+            if (moveLeft && jetX > 0) {
+                jetX -= jetSpeed * deltaTime;
+                if (jetX < 0) jetX = 0;
+            }
+            if (moveRight && jetX < gameContainer.offsetWidth - 50) {
+                jetX += jetSpeed * deltaTime;
+                if (jetX > gameContainer.offsetWidth - 50) jetX = gameContainer.offsetWidth - 50;
+            }
+            if (moveUp && jetY > 0) {
+                jetY -= jetSpeed * deltaTime;
+                if (jetY < 0) jetY = 0;
+            }
+            if (moveDown && jetY < gameContainer.offsetHeight - 50) {
+                jetY += jetSpeed * deltaTime;
+                if (jetY > gameContainer.offsetHeight - 50) jetY = gameContainer.offsetHeight - 50;
+            }
+            if (touchX !== null && touchY !== null) {
+                jetX = Math.max(0, Math.min(touchX - 25, gameContainer.offsetWidth - 50));
+                jetY = Math.max(0, Math.min(touchY - 25, gameContainer.offsetHeight - 50));
+            }
+            jet.style.left = jetX + 'px';
+            jet.style.top = jetY + 'px';
+
+            if (isShooting && (currentTime / 1000 - lastShotTime) >= shootCooldown) {
+                shoot();
+                lastShotTime = currentTime / 1000;
+            }
+
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                let bulletY = parseFloat(bullet.style.bottom) || 0;
+                let bulletX = parseFloat(bullet.style.left) || 0;
+
+                if (currentPowerUp === 'homing-missiles' && bullet.className === 'missile') {
+                    let closestEnemy = null;
+                    let minDistance = Infinity;
+                    enemies.forEach(enemy => {
+                        const enemyX = parseFloat(enemy.style.left) || 0;
+                        const enemyY = parseFloat(enemy.style.top) || 0;
+                        const distance = Math.sqrt(
+                            (bulletX - enemyX - 25) ** 2 + (bulletY - enemyY - 25) ** 2
+                        );
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestEnemy = { x: enemyX + 25, y: enemyY + 25 };
+                        }
+                    });
+                    if (closestEnemy) {
+                        const dx = closestEnemy.x - bulletX;
+                        const dy = closestEnemy.y - bulletY;
+                        const angle = Math.atan2(dy, dx);
+                        bulletX += Math.cos(angle) * deltaTime * 300;
+                        bulletY += Math.sin(angle) * deltaTime * 300;
+                        bullet.style.transform = `rotate(${angle * 180 / Math.PI}deg)`;
+                    }
+                } else if (bullet.dataset && bullet.dataset.direction) {
+                    const direction = parseFloat(bullet.dataset.direction);
+                    bulletX += direction * deltaTime * 200;
+                } else if (currentPowerUp === 'pulse-wave' && bullet.className === 'pulse-wave') {
+                    const scale = parseFloat(bullet.dataset.scale) || 1;
+                    bullet.dataset.scale = scale + deltaTime * 2;
+                    bullet.style.width = `${20 * bullet.dataset.scale}px`;
+                    bullet.style.height = `${20 * bullet.dataset.scale}px`;
+                    bullet.style.left = `${bulletX - (10 * bullet.dataset.scale - 10)}px`;
+                    bullet.style.bottom = `${bulletY}px`;
+                    bullet.style.opacity = 1 - (bullet.dataset.scale - 1) / 2;
+                    if (bullet.dataset.scale > 3) {
+                        bullet.remove();
+                        bullets.splice(i, 1);
+                        continue;
+                    }
+                }
+                bulletY += bulletSpeed * deltaTime;
+
+                bullet.style.left = bulletX + 'px';
+                bullet.style.bottom = bulletY + 'px';
+
+                if (bulletY > gameContainer.offsetHeight || bulletY < 0 || 
+                    bulletX < 0 || bulletX > gameContainer.offsetWidth) {
+                    bullet.remove();
+                    bullets.splice(i, 1);
+                }
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                let enemyX = parseFloat(enemy.style.left) || 0;
+                let enemyY = parseFloat(enemy.style.top) || 0;
+
+                const movementType = Math.random() < 0.3 ? getRandomMovementType() : 'straight';
+                const speed = (baseEnemySpeed + level * 20) * deltaTime;
+
+                switch (movementType) {
+                    case 'zigzag':
+                        enemyX += Math.sin(enemyY / 50) * 50 * deltaTime;
+                        if (enemyX < 0) enemyX = 0;
+                        if (enemyX > gameContainer.offsetWidth - 50) enemyX = gameContainer.offsetWidth - 50;
+                        enemyY += speed;
+                        break;
+                    case 'diagonalRight':
+                        enemyX += speed * 0.5;
+                        if (enemyX > gameContainer.offsetWidth - 50) enemyX = gameContainer.offsetWidth - 50;
+                        enemyY += speed;
+                        break;
+                    case 'diagonalLeft':
+                        enemyX -= speed * 0.5;
+                        if (enemyX < 0) enemyX = 0;
+                        enemyY += speed;
+                        break;
+                    case 'sinusoidal':
+                        enemyX += Math.sin(enemyY / 30) * 30 * deltaTime;
+                        if (enemyX < 0) enemyX = 0;
+                        if (enemyX > gameContainer.offsetWidth - 50) enemyX = gameContainer.offsetWidth - 50;
+                        enemyY += speed;
+                        break;
+                    default:
+                        enemyY += speed;
+                        break;
+                }
+
+                enemy.style.left = enemyX + 'px';
+                enemy.style.top = enemyY + 'px';
+
+                const jetRect = jet.getBoundingClientRect();
+                const enemyRect = enemy.getBoundingClientRect();
+                if (
+                    jetRect.left < enemyRect.right &&
+                    jetRect.right > enemyRect.left &&
+                    jetRect.top < enemyRect.bottom &&
+                    jetRect.bottom > enemyRect.top
+                ) {
+                    endGame();
+                    return;
+                }
+
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    const bullet = bullets[j];
+                    const bulletRect = bullet.getBoundingClientRect();
+                    const enemyRect = enemy.getBoundingClientRect();
+                    if (
+                        bulletRect.left < enemyRect.right &&
+                        bulletRect.right > enemyRect.left &&
+                        bulletRect.top < enemyRect.bottom &&
+                        bulletRect.bottom > enemyRect.top
+                    ) {
+                        const explosion = document.createElement('div');
+                        explosion.className = 'explosion';
+                        explosion.style.left = (enemyX + 25 - 25) + 'px';
+                        explosion.style.top = (enemyY + 25 - 25) + 'px';
+                        gameContainer.appendChild(explosion);
+
+                        setTimeout(() => {
+                            explosion.remove();
+                        }, 300);
+
+                        enemy.remove();
+                        enemies.splice(i, 1);
+                        if (currentPowerUp !== 'laser' && currentPowerUp !== 'flamethrower') {
+                            bullet.remove();
+                            bullets.splice(j, 1);
+                        }
+                        score += 10;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                        break;
+                    }
+                }
+            }
+
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                const powerUp = powerUps[i];
+                let powerUpY = parseFloat(powerUp.style.top) || 0;
+                powerUpY += 50 * deltaTime;
+                powerUp.style.top = powerUpY + 'px';
+
+                const jetRect = jet.getBoundingClientRect();
+                const powerUpRect = powerUp.getBoundingClientRect();
+                if (
+                    jetRect.left < powerUpRect.right &&
+                    jetRect.right > powerUpRect.left &&
+                    jetRect.top < powerUpRect.bottom &&
+                    jetRect.bottom > powerUpRect.top
+                ) {
+                    powerUp.remove();
+                    powerUps.splice(i, 1);
+                    activatePowerUp();
+                }
+
+                if (powerUpY > gameContainer.offsetHeight) {
+                    powerUp.remove();
+                    powerUps.splice(i, 1);
+                }
+            }
+
+            if (isPowerUpActive) {
+                powerUpTimer -= deltaTime;
+                if (powerUpTimer <= 0) {
+                    deactivatePowerUp();
+                }
+            }
+
+            spawnRate = 0.02 + (level - 1) * 0.005;
+            if (spawnRate > 0.1) spawnRate = 0.1;
+
+            if (Math.random() < spawnRate) spawnEnemy();
+            if (Math.random() < 0.001) spawnPowerUp();
+
+            levelInfoDisplay.textContent = `Level: ${level} - Time: ${Math.floor(gameTime)}s`;
+
+            requestAnimationFrame(updateGame);
+        }
+
+        function getRandomMovementType() {
+            const movements = ['zigzag', 'diagonalRight', 'diagonalLeft', 'sinusoidal'];
+            return movements[Math.floor(Math.random() * movements.length)];
+        }
+
+        function shoot() {
+            if (!gameActive) return;
+            const jetBottom = gameContainer.offsetHeight - jetY - 50;
+            try {
+                if (currentPowerUp === 'homing-missiles') {
+                    const missile = document.createElement('div');
+                    missile.className = 'missile';
+                    missile.style.left = (jetX + 22.5) + 'px';
+                    missile.style.bottom = (jetBottom + 50) + 'px';
+                    gameContainer.appendChild(missile);
+                    bullets.push(missile);
+                } else if (currentPowerUp === 'spread-shot') {
+                    const angles = [-20, -10, 0, 10, 20];
+                    angles.forEach(angle => {
+                        const bullet = document.createElement('div');
+                        bullet.className = 'spread-bullet';
+                        bullet.style.left = (jetX + 22.5) + 'px';
+                        bullet.style.bottom = (jetBottom + 50) + 'px';
+                        bullet.dataset.direction = Math.sin(angle * Math.PI / 180) * 2;
+                        gameContainer.appendChild(bullet);
+                        bullets.push(bullet);
+                    });
+                } else if (currentPowerUp === 'laser') {
+                    const beam = document.createElement('div');
+                    beam.className = 'laser-beam';
+                    beam.style.left = (jetX + 22.5 - 4) + 'px';
+                    beam.style.bottom = (jetBottom + 50) + 'px';
+                    gameContainer.appendChild(beam);
+                    bullets.push(beam);
+                } else if (currentPowerUp === 'flamethrower') {
+                    const flame = document.createElement('div');
+                    flame.className = 'flame';
+                    flame.style.left = (jetX + 22.5 - 10) + 'px';
+                    flame.style.bottom = (jetBottom + 50) + 'px';
+                    gameContainer.appendChild(flame);
+                    bullets.push(flame);
+                } else if (currentPowerUp === 'pulse-wave') {
+                    const pulse = document.createElement('div');
+                    pulse.className = 'pulse-wave';
+                    pulse.style.left = (jetX + 22.5 - 10) + 'px';
+                    pulse.style.bottom = (jetBottom + 50) + 'px';
+                    pulse.dataset.scale = '1';
+                    gameContainer.appendChild(pulse);
+                    bullets.push(pulse);
+                } else {
+                    const bullet = document.createElement('div');
+                    bullet.className = 'bullet';
+                    bullet.style.left = (jetX + 22.5) + 'px';
+                    bullet.style.bottom = (jetBottom + 50) + 'px';
+                    gameContainer.appendChild(bullet);
+                    bullets.push(bullet);
+                }
+            } catch (error) {
+                console.error('Error in shoot function:', error);
+            }
+        }
+
+        function spawnEnemy() {
+            if (!gameActive) return;
+            const enemy = document.createElement('div');
+            enemy.className = 'enemy';
+            const randomImage = enemyImageQueue[currentEnemyIndex];
+            enemy.style.backgroundImage = `url('${randomImage}')`;
+            enemy.style.left = Math.random() * (gameContainer.offsetWidth - 50) + 'px';
+            enemy.style.top = '0px';
+            gameContainer.appendChild(enemy);
+            enemies.push(enemy);
+
+            currentEnemyIndex++;
+            if (currentEnemyIndex >= enemyImageQueue.length) {
+                currentEnemyIndex = 0;
+                shuffle(enemyImageQueue);
+            }
+        }
+
+        function spawnPowerUp() {
+            if (!gameActive) return;
+            const powerUp = document.createElement('div');
+            powerUp.className = 'power-up';
+            powerUp.style.left = Math.random() * (gameContainer.offsetWidth - 30) + 'px';
+            powerUp.style.top = '0px';
+            gameContainer.appendChild(powerUp);
+            powerUps.push(powerUp);
+        }
+
+        function activatePowerUp() {
+            isPowerUpActive = true;
+            currentPowerUp = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+            jet.className = currentPowerUp;
+
+            if (currentPowerUp === 'homing-missiles') {
+                bulletSpeed = 300;
+            } else if (currentPowerUp === 'spread-shot') {
+                bulletSpeed = 400;
+            } else if (currentPowerUp === 'laser') {
+                bulletSpeed = 600;
+            } else if (currentPowerUp === 'flamethrower') {
+                bulletSpeed = 200;
+            } else if (currentPowerUp === 'pulse-wave') {
+                bulletSpeed = 100;
+            }
+            powerUpTimer = powerUpDuration;
+        }
+
+        function deactivatePowerUp() {
+            isPowerUpActive = false;
+            currentPowerUp = null;
+            jet.className = '';
+            bulletSpeed = 400;
+        }
+
+        function endGame() {
+            gameActive = false;
+            gameOverScreen.style.display = 'block';
+            finalScoreDisplay.textContent = `Score: ${score} (Level ${level}, Time: ${Math.floor(gameTime)}s)`;
+            replayBtn.textContent = 'Replay';
+            isShooting = false;
+            captureScreenshot();
+        }
+
+        function captureScreenshot() {
+            html2canvas(gameOverScreen).then(canvas => {
+                window.lastScoreScreenshot = canvas.toDataURL('image/png');
+            }).catch(error => {
+                console.error('Error capturing screenshot:', error);
+            });
+        }
+
+        function shareScoreOnX() {
+            const tweetText = `I scored ${score} in Pi Jet: Jet Level ${level}, Time: ${Math.floor(gameTime)}s #Goldpi #DarkPi`;
+            const encodedText = encodeURIComponent(tweetText);
+
+            if (window.lastScoreScreenshot) {
+                const byteString = atob(window.lastScoreScreenshot.split(',')[1]);
+                const mimeString = window.lastScoreScreenshot.split(',')[0].split(':')[1].split(';')[0];
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                const blob = new Blob([ab], { type: mimeString });
+
+                const link = document.createElement('a');
+                link.href = window.lastScoreScreenshot;
+                link.download = `Score_${score}_Level_${level}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                const xUrl = `https://x.com/intent/tweet?text=${encodedText}`;
+                window.open(xUrl, '_blank');
+            } else {
+                const xUrl = `https://x.com/intent/tweet?text=${encodedText}`;
+                window.open(xUrl, '_blank');
+            }
+        }
+
+        function resetGame() {
+            gameActive = true;
+            score = 0;
+            level = 1;
+            gameTime = 0;
+            baseEnemySpeed = 100;
+            spawnRate = 0.02;
+            bulletSpeed = 400;
+            isPowerUpActive = false;
+            currentPowerUp = null;
+            powerUpTimer = 0;
+            jetSpeed = 300;
+            scoreDisplay.textContent = `Score: ${score}`;
+            levelInfoDisplay.textContent = `Level: ${level} - Time: ${Math.floor(gameTime)}s`;
+            gameOverScreen.style.display = 'none';
+            enemies.forEach(enemy => enemy.remove());
+            bullets.forEach(bullet => bullet.remove());
+            powerUps.forEach(powerUp => powerUp.remove());
+            enemies = [];
+            bullets = [];
+            powerUps = [];
+            jetX = gameContainer.offsetWidth / 2 - 25;
+            jetY = gameContainer.offsetHeight - 50;
+            jet.style.left = jetX + 'px';
+            jet.style.top = jetY + 'px';
+            moveLeft = false;
+            moveRight = false;
+            moveUp = false;
+            moveDown = false;
+            touchX = null;
+            touchY = null;
+            isShooting = false;
+            currentEnemyIndex = 0;
+            shuffle(enemyImageQueue);
+            jet.className = '';
+            spawnEnemy();
+            requestAnimationFrame(updateGame);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            if (e.key === 'ArrowLeft') moveLeft = true;
+            if (e.key === 'ArrowRight') moveRight = true;
+            if (e.key === 'ArrowUp') moveUp = true;
+            if (e.key === 'ArrowDown') moveDown = true;
+            if (e.key === ' ') shoot();
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') moveLeft = false;
+            if (e.key === 'ArrowRight') moveRight = false;
+            if (e.key === 'ArrowUp') moveUp = false;
+            if (e.key === 'ArrowDown') moveDown = false;
+        });
+
+        gameContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchX = e.touches[0].clientX - gameContainer.offsetLeft;
+            touchY = e.touches[0].clientY - gameContainer.offsetTop;
+            isShooting = true;
+            if (gameActive) shoot();
+        });
+
+        gameContainer.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!gameActive) return;
+            touchX = e.touches[0].clientX - gameContainer.offsetLeft;
+            touchY = e.touches[0].clientY - gameContainer.offsetTop;
+        });
+
+        gameContainer.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            touchX = null;
+            touchY = null;
+            isShooting = false;
+        });
+
+        replayBtn.addEventListener('click', resetGame);
+        shareXBtn.addEventListener('click', shareScoreOnX);
+    </script>
+</body>
+</html>
